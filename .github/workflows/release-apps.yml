@@ -87,6 +87,11 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Clean Android plugin registrant
+        run: |
+          flutter clean
+          rm -rf android/app/src/main/java/io/flutter/plugins
+
       - name: Build Android APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -206,16 +211,19 @@ jobs:
     if: ${{ vars.VERCEL_FLUTTER_PROJECT_ID != '' }}
     continue-on-error: true
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: flutter-web
           path: build/web
 
       - name: Deploy Flutter web to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_FLUTTER_PROJECT_ID }}
-          working-directory: build/web
-          vercel-args: "--prod"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_FLUTTER_PROJECT_ID }}
+        run: |
+          npm install -g vercel@latest
+          cd build/web
+          vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
