@@ -20,11 +20,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Import this repo in Vercel.
 2. Set **Root Directory** to `website`.
-3. Add environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_APP_URL` → your Flutter web URL
-4. Deploy.
+3. **Required** environment variables (Project → Settings → Environment Variables):
+   - `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon/public key
+   - `NEXT_PUBLIC_APP_URL` — Flutter web app URL (e.g. `https://app.yourschool.com`)
+4. Redeploy after adding env vars (build can succeed without them, but pages will be empty until they are set).
+5. Deploy.
 
 Apply migration `20260616000000_public_website.sql` in Supabase before going live.
 

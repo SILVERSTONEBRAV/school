@@ -4,6 +4,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { getSchool } from "@/lib/data";
 import "./globals.css";
 
+// Fetch CMS data at request time (build succeeds without Supabase env vars).
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const school = await getSchool();
   return {
