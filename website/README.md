@@ -4,15 +4,20 @@ Marketing and public portal for the school. Deploy to **Vercel** at your main do
 
 The Flutter app lives separately at `NEXT_PUBLIC_APP_URL` (e.g. `app.yourschool.com`).
 
+Requires **Node.js 24** (see `.nvmrc` and `package.json` engines).
+
 ## Setup
 
 ```bash
 cd website
+nvm use    # or: fnm use / volta pin node@24
 cp .env.local.example .env.local
 # Edit .env.local with Supabase URL, anon key, and app URL
 npm install
 npm run dev
 ```
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for download links, hosting binaries, and version updates.
 
 Open [http://localhost:3000](http://localhost:3000).
 

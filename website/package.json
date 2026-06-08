@@ -2,6 +2,9 @@
   "name": "school-website",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,7 +18,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.17.24",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "autoprefixer": "^10.4.21",
