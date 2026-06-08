@@ -11,6 +11,9 @@ on:
         required: true
         default: "1.0.0"
 
+permissions:
+  contents: write
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -39,6 +42,13 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "::error::Add SUPABASE_URL and SUPABASE_ANON_KEY to GitHub Actions secrets."
+            exit 1
+          fi
+
       - name: Build Flutter web
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -50,8 +60,8 @@ jobs:
           flutter build web --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=APP_BASE_URL="$APP_BASE_URL" \
-            --dart-define=PUBLIC_WEBSITE_URL="$PUBLIC_WEBSITE_URL"
+            --dart-define=APP_BASE_URL="${APP_BASE_URL:-https://schoolwebkenya.vercel.app}" \
+            --dart-define=PUBLIC_WEBSITE_URL="${PUBLIC_WEBSITE_URL:-https://webhighschool.vercel.app}"
 
       - run: cp deploy/flutter-web-vercel.json build/web/vercel.json
 
@@ -88,8 +98,8 @@ jobs:
           flutter build apk --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=APP_BASE_URL="$APP_BASE_URL" \
-            --dart-define=PUBLIC_WEBSITE_URL="$PUBLIC_WEBSITE_URL"
+            --dart-define=APP_BASE_URL="${APP_BASE_URL:-https://schoolwebkenya.vercel.app}" \
+            --dart-define=PUBLIC_WEBSITE_URL="${PUBLIC_WEBSITE_URL:-https://webhighschool.vercel.app}"
 
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk "school-management-${{ needs.prepare.outputs.version }}-android.apk"
@@ -111,6 +121,9 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
       - name: Build Windows
         shell: pwsh
         env:
@@ -120,11 +133,13 @@ jobs:
           PUBLIC_WEBSITE_URL: ${{ vars.PUBLIC_WEBSITE_URL }}
         run: |
           flutter pub get
+          $appUrl = if ($env:APP_BASE_URL) { $env:APP_BASE_URL } else { "https://schoolwebkenya.vercel.app" }
+          $siteUrl = if ($env:PUBLIC_WEBSITE_URL) { $env:PUBLIC_WEBSITE_URL } else { "https://webhighschool.vercel.app" }
           flutter build windows --release `
             --dart-define=SUPABASE_URL="$env:SUPABASE_URL" `
             --dart-define=SUPABASE_ANON_KEY="$env:SUPABASE_ANON_KEY" `
-            --dart-define=APP_BASE_URL="$env:APP_BASE_URL" `
-            --dart-define=PUBLIC_WEBSITE_URL="$env:PUBLIC_WEBSITE_URL"
+            --dart-define=APP_BASE_URL="$appUrl" `
+            --dart-define=PUBLIC_WEBSITE_URL="$siteUrl"
 
       - name: Zip Windows release
         shell: pwsh
@@ -143,8 +158,6 @@ jobs:
   publish:
     needs: [prepare, build-web, build-android, build-windows]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -153,20 +166,22 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: List artifacts
+        run: find dist -type f || dir dist /s
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: School Management ${{ needs.prepare.outputs.version }}
           generate_release_notes: true
+          make_latest: true
           files: |
             dist/school-management-${{ needs.prepare.outputs.version }}-windows.zip
             dist/school-management-${{ needs.prepare.outputs.version }}-android.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Supabase download links
-        if: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -176,14 +191,20 @@ jobs:
           TAG: ${{ needs.prepare.outputs.tag }}
           REPO: ${{ github.repository }}
         run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skipping Supabase sync — SUPABASE_SERVICE_ROLE_KEY not set."
+            exit 0
+          fi
+          APP="${APP_BASE_URL:-https://schoolwebkenya.vercel.app}"
           WIN="https://github.com/${REPO}/releases/download/${TAG}/school-management-${VERSION}-windows.zip"
           APK="https://github.com/${REPO}/releases/download/${TAG}/school-management-${VERSION}-android.apk"
-          node scripts/update-portal-releases.mjs "$VERSION" "$WIN" "$APK" "$APP_BASE_URL"
+          node scripts/update-portal-releases.mjs "$VERSION" "$WIN" "$APK" "$APP"
 
   deploy-flutter-web:
     needs: [prepare, build-web]
     runs-on: ubuntu-latest
     if: ${{ vars.VERCEL_FLUTTER_PROJECT_ID != '' }}
+    continue-on-error: true
     steps:
       - uses: actions/download-artifact@v4
         with:
