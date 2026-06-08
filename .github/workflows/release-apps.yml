@@ -224,6 +224,12 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_FLUTTER_PROJECT_ID }}
         run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::Skipping Vercel deploy — set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_FLUTTER_PROJECT_ID."
+            exit 0
+          fi
           npm install -g vercel@latest
+          mkdir -p build/web/.vercel
+          printf '{"orgId":"%s","projectId":"%s"}' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > build/web/.vercel/project.json
           cd build/web
-          vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
+          vercel deploy --prod --yes --token "$VERCEL_TOKEN"
