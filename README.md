@@ -9,6 +9,12 @@ A modern high school management system built with **Flutter** and **Supabase**, 
 - Riverpod (state management)
 - GoRouter (navigation)
 
+## Public website & releases
+
+- **Public portal:** Next.js app in [`website/`](website/) → deploy to Vercel (Node 24, root `website`)
+- **Web app:** Flutter web at `app.yourschool.com` (CI deploys via GitHub Actions)
+- **Downloads:** Automated on git tag `v*` — see [`.github/SETUP.md`](.github/SETUP.md)
+
 ## Getting Started
 
 ### 1. Supabase setup

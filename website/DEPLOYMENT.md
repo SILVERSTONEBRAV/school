@@ -1,5 +1,7 @@
 # Deployment & app download guide
 
+> **Automated setup:** see [`.github/SETUP.md`](../.github/SETUP.md) for GitHub Actions, secrets, and one-command releases.
+
 ## Architecture
 
 ```
@@ -134,25 +136,26 @@ Or leave empty — the site uses `NEXT_PUBLIC_APP_URL` + `/login`.
 
 ---
 
-## 6. Updating versions
+## 6. Updating versions (automated)
 
-When you ship a new build:
+1. Bump `pubspec.yaml`: `version: 1.1.0+2`
+2. Commit and tag:
 
-1. Bump version in `pubspec.yaml`:
-
-```yaml
-version: 1.1.0+2   # 1.1.0 = user-facing, +2 = build number
+```bash
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
-2. Build the platform artifact (windows / apk / web).
-3. Upload to GitHub Releases (or Storage) with a new tag, e.g. `v1.1.0`.
-4. In **Admin → Portal CMS**, update that platform:
-   - **Version:** `1.1.0`
-   - **Download URL:** new release asset URL
-   - **Notes:** e.g. “Fee payments fix, gallery updates”
-5. Save — public **Get the App** page updates automatically.
+GitHub Actions **Release apps** will:
 
-You do **not** need to redeploy the Next.js site for link/version changes.
+- Build Windows + Android + Web
+- Publish [GitHub Release](https://github.com/SILVERSTONEBRAV/school/releases) assets
+- Update **portal_app_releases** in Supabase (links + version on `/get-app`)
+- Deploy Flutter web to Vercel (if configured)
+
+Manual path: **Actions → Release apps → Run workflow**.
+
+Local builds: `.\scripts\build-release.ps1 -Version 1.1.0`
 
 ---
 
