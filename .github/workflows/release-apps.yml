@@ -186,7 +186,6 @@ jobs:
             dist/school-management-${{ needs.prepare.outputs.version }}-android.apk
 
       - name: Update Supabase download links
-        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

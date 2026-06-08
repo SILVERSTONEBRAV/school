@@ -29,7 +29,7 @@ const headers = {
   apikey: serviceKey,
   Authorization: `Bearer ${serviceKey}`,
   "Content-Type": "application/json",
-  Prefer: "return=minimal",
+  Prefer: "return=representation",
 };
 
 async function rest(path, options = {}) {
@@ -37,12 +37,16 @@ async function rest(path, options = {}) {
     ...options,
     headers: { ...headers, ...options.headers },
   });
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`${path} ${res.status}: ${text}`);
   }
-  if (res.status === 204) return null;
-  return res.json();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 async function getSchoolId() {
@@ -52,56 +56,68 @@ async function getSchoolId() {
   return rows[0].id;
 }
 
-async function patchRelease(schoolId, platform, downloadUrl, notes) {
-  const loginUrl =
-    platform === "web" && webUrl
-      ? webUrl.replace(/\/$/, "") + "/login"
-      : downloadUrl;
+async function upsertRelease(schoolId, platform, downloadUrl, notes, sortOrder) {
+  const row = {
+    school_id: schoolId,
+    platform,
+    download_url: downloadUrl,
+    version,
+    release_notes: notes,
+    is_enabled: true,
+    sort_order: sortOrder,
+    updated_at: new Date().toISOString(),
+  };
 
-  await rest(
-    `portal_app_releases?school_id=eq.${schoolId}&platform=eq.${platform}`,
+  const result = await rest(
+    "portal_app_releases?on_conflict=school_id,platform",
     {
-      method: "PATCH",
-      body: JSON.stringify({
-        download_url: loginUrl,
-        version,
-        release_notes: notes,
-        is_enabled: true,
-        updated_at: new Date().toISOString(),
-      }),
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify([row]),
     },
   );
-  console.log(`Updated ${platform} → v${version}`);
+
+  if (!result?.length) {
+    throw new Error(`No row upserted for platform ${platform}`);
+  }
+
+  console.log(`Updated ${platform} → v${version} → ${downloadUrl}`);
 }
 
 async function main() {
   const schoolId = await getSchoolId();
   console.log(`School id: ${schoolId}`);
 
+  const webLogin =
+    webUrl != null ? webUrl.replace(/\/$/, "") + "/login" : null;
+
+  if (webLogin) {
+    await upsertRelease(
+      schoolId,
+      "web",
+      webLogin,
+      "Continue in browser — no install needed",
+      1,
+    );
+  }
+
   if (windowsUrl) {
-    await patchRelease(
+    await upsertRelease(
       schoolId,
       "windows",
       windowsUrl,
       `Windows desktop build v${version}`,
+      2,
     );
   }
 
   if (androidUrl) {
-    await patchRelease(
+    await upsertRelease(
       schoolId,
       "android",
       androidUrl,
       `Android APK v${version}`,
-    );
-  }
-
-  if (webUrl) {
-    await patchRelease(
-      schoolId,
-      "web",
-      webUrl.replace(/\/$/, "") + "/login",
-      "Continue in browser — no install needed",
+      3,
     );
   }
 

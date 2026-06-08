@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { siteConfig } from "@/lib/config";
-import { getSchool } from "@/lib/data";
+import { HomeDownloadStrip } from "@/components/HomeDownloadStrip";
+import { webLoginUrl } from "@/lib/app-releases";
+import { getAppReleases, getSchool } from "@/lib/data";
+
+export const revalidate = 60;
 
 export default async function HomePage() {
-  const school = await getSchool();
+  const [school, releases] = await Promise.all([getSchool(), getAppReleases()]);
+  const loginUrl = webLoginUrl(releases);
 
   return (
     <>
@@ -28,7 +32,7 @@ export default async function HomePage() {
               Get the app
             </Link>
             <a
-              href={`${siteConfig.appUrl}/login`}
+              href={loginUrl}
               className="rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
             >
               Continue on web
@@ -42,6 +46,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <HomeDownloadStrip releases={releases} />
 
       <section className="container-page py-16">
         <h2 className="section-title">Everything in one place</h2>

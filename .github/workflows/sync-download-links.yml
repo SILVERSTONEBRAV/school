@@ -1,0 +1,41 @@
+name: Sync download links
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.0.3)"
+        required: true
+        default: "1.0.3"
+      tag:
+        description: "Git tag (e.g. v1.0.3)"
+        required: true
+        default: "v1.0.3"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Supabase download links
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          SCHOOL_ID: ${{ vars.SCHOOL_ID }}
+          VERSION: ${{ github.event.inputs.version }}
+          TAG: ${{ github.event.inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Add SUPABASE_SERVICE_ROLE_KEY to GitHub Actions secrets."
+            exit 1
+          fi
+          APP="${APP_BASE_URL:-https://schoolwebkenya.vercel.app}"
+          WIN="https://github.com/${REPO}/releases/download/${TAG}/school-management-${VERSION}-windows.zip"
+          APK="https://github.com/${REPO}/releases/download/${TAG}/school-management-${VERSION}-android.apk"
+          node scripts/update-portal-releases.mjs "$VERSION" "$WIN" "$APK" "$APP"
